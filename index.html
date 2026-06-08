@@ -73,7 +73,6 @@
             width: 100%;
             height: 100%;
             transition: transform 8s cubic-bezier(0.1, 0, 0, 1);
-            transform: rotate(0deg);
         }
 
         .pointer {
@@ -184,6 +183,9 @@
         const winDisplay = document.getElementById('win-display');
 
         const bonuses = ["€200", "€400", "€500", "€800", "€1000", "€1500", "€1800", "€2000"];
+        // Only these indices are allowed to win: 0 (€200), 2 (€500), 5 (€1500), 6 (€1800), 7 (€2000)
+        const allowedIndices = [0, 2, 5, 6, 7];
+        
         const colors = ["#001529", "#0074d9"];
         const totalSectors = bonuses.length;
         const arc = (2 * Math.PI) / totalSectors;
@@ -191,7 +193,6 @@
         let currentRotation = 0;
 
         function draw() {
-            ctx.clearRect(0,0,480,480);
             for (let i = 0; i < totalSectors; i++) {
                 const angle = i * arc;
                 ctx.fillStyle = colors[i % 2];
@@ -216,31 +217,28 @@
         btn.addEventListener('click', () => {
             btn.disabled = true;
             
-            // 1. Pick a random index
-            const randomIndex = Math.floor(Math.random() * totalSectors);
+            // Randomly select one index from the ALLOWED list
+            const targetIndex = allowedIndices[Math.floor(Math.random() * allowedIndices.length)];
             
-            // 2. Calculate degrees
             const degreesPerSlice = 360 / totalSectors;
+            const extraSpins = 360 * 8; // 8 full rotations
             
-            // 3. To land on randomIndex at the TOP (pointer), we need to offset
-            // The canvas draws index 0 starting at 3 o'clock.
-            const extraSpins = 360 * 10; // 10 full loops
-            const stopAngle = (randomIndex * degreesPerSlice);
+            // Calculation to align the target slice with the top pointer
+            const stopAngle = (targetIndex * degreesPerSlice);
+            const rotationToCenter = (360 - stopAngle) - (degreesPerSlice / 2) - 90;
             
-            // The formula to align the slice to the top pointer (270 deg / -90 deg position)
-            currentRotation += extraSpins + (360 - (currentRotation % 360)) + (360 - stopAngle - (degreesPerSlice/2) - 90);
+            currentRotation += extraSpins + (rotationToCenter - (currentRotation % 360) + 360) % 360;
 
             canvas.style.transform = `rotate(${currentRotation}deg)`;
 
             setTimeout(() => {
-                winDisplay.innerText = bonuses[randomIndex];
+                winDisplay.innerText = bonuses[targetIndex];
                 modal.classList.add('show-modal');
                 
-                // Confetti
                 const end = Date.now() + 5000;
                 (function frame() {
-                    confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 } });
-                    confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 } });
+                    confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#00d2ff', '#ffffff'] });
+                    confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#3a7bd5', '#ffffff'] });
                     if (Date.now() < end) requestAnimationFrame(frame);
                 }());
             }, 8200);
